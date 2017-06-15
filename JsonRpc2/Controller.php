@@ -14,6 +14,8 @@ class Controller extends \yii\web\Controller
 {
     public $enableCsrfValidation = false;
 
+    private $_isError = false;
+
     /** @var array Stores information about param's types and method's return type */
     private $methodInfo = [
         'params' => [],
@@ -24,6 +26,11 @@ class Controller extends \yii\web\Controller
     protected $requestObject;
 
     public function actionIndex (){}
+
+    public function isError()
+    {
+        return $this->_isError;
+    }
 
     /**
      * Validates, runs Action and returns result in JSON-RPC 2.0 format
@@ -51,14 +58,24 @@ class Controller extends \yii\web\Controller
             $resultData = [Helper::formatResponse(null, new Exception("Invalid Request", Exception::INVALID_REQUEST))];
         } else {
             foreach ($requests as $request) {
-                if($response = $this->getActionResponse($request))
-                    $resultData[] = $response;
-            }
+                $formattedResponse = $this->getActionResponse($request);
+                if(isset($formattedResponse->data)){
+                    $resultData[] = $formattedResponse;
+                }
+             }
         }
 
         $response = Yii::$app->getResponse();
         $response->format = Response::FORMAT_JSON;
-        $response->data = $isBatch || null === $resultData ? $resultData : current($resultData);
+        $response->data = $isBatch || null === $resultData ? $resultData['data'] : current($resultData);
+        if($this->isError()){
+            if($isBatch){
+                // todo
+            } else{
+                $error = $formattedResponse->error;
+                $response->setStatusCode($error->getHTTPStatusCode(), $error->getMessage());
+            }
+        }
         return $response;
     }
 
@@ -79,12 +96,15 @@ class Controller extends \yii\web\Controller
             ob_clean();
             $result = $this->validateResult($dirtyResult);
         } catch (HttpException $e) {
+            $this->_isError = true;
             throw $e;
         } catch (Exception $e) {
             \Yii::error($e, __METHOD__);
+            $this->_isError = true;
             $error = $e;
         } catch (\Exception $e) {
             \Yii::error($e, __METHOD__);
+            $this->_isError = true;
             $error = new Exception("Internal error", Exception::INTERNAL_ERROR);
         }
 

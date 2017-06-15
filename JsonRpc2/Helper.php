@@ -14,26 +14,26 @@ class Helper
      * @param null $result
      * @param \JsonRpc2\Exception|null $error
      * @param null $id
-     * @return array
+     * @return \stdClass
      */
-    public static function formatResponse ($result = null, Exception $error = null, $id = null)
+    public static function formatResponse($result = null, Exception $error = null, $id = null)
     {
         $resultKey = 'result';
 
         if (!empty($error)) {
             $resultKey = 'error';
             $resultValue = $error->toArray();
-        }
-        else if (null === $result)
+        } else if (null === $result) {
             $resultValue = self::$defaultResult;
-        else
+        } else {
             $resultValue = $result;
+        }
 
-        return [
-            'jsonrpc' => '2.0',
-            'id' => $id,
-            $resultKey => $resultValue,
-        ];
+        $obj = new \stdClass();
+        $obj->data = ['jsonrpc' => '2.0', 'id' => $id, $resultKey => $resultValue,];
+        $obj->error = $error;
+
+        return $obj;
     }
 
     /**
