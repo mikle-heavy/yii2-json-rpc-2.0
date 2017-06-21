@@ -43,6 +43,14 @@ class Exception extends \yii\base\Exception
     }
 
     /**
+     * @return int
+     */
+    public function getHTTPStatusCode()
+    {
+        return $this->httpCode;
+    }
+
+    /**
      * @return array
      */
     public function getData()
